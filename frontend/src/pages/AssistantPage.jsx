@@ -21,7 +21,7 @@ export default function AssistantPage() {
       <div>
         <p className="eyebrow">PRODUCT ASSISTANT</p>
         <h1>Find a product</h1>
-        <p>Answers are drafted by AI from our live catalog and checked against current prices and stock.</p>
+        <p>AI helps select matching products. Answers show current catalog facts, with catalog rules as a fallback when AI is unavailable.</p>
 
         <form onSubmit={ask}>
           <label>Your question<textarea value={question} onChange={(event) => setQuestion(event.target.value)} minLength="3" maxLength="300" placeholder="Which keyboard is below ₱2,000?" required /></label>

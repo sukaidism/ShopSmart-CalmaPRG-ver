@@ -81,7 +81,7 @@ git --version
 13. At the `postgres=#` prompt, run these statements one at a time:
 
 ```sql
-CREATE USER shopsmart_user WITH PASSWORD 'shopsmart_dev';
+CREATE USER shopsmart_user WITH PASSWORD 'REPLACE_WITH_LOCAL_PASSWORD';
 CREATE DATABASE shopsmart OWNER shopsmart_user;
 ```
 
@@ -130,7 +130,7 @@ Copy-Item frontend\.env.example frontend\.env
 Open `backend/.env`. It should contain:
 
 ```env
-DATABASE_URL="postgresql://shopsmart_user:shopsmart_dev@localhost:5432/shopsmart?schema=public"
+DATABASE_URL="postgresql://shopsmart_user:REPLACE_WITH_LOCAL_PASSWORD@localhost:5432/shopsmart?schema=public"
 PORT=3000
 FRONTEND_URL=http://localhost:5173
 NODE_ENV=development
@@ -263,7 +263,7 @@ psql -U postgres
 Then run:
 
 ```sql
-CREATE USER shopsmart_user WITH PASSWORD 'shopsmart_dev';
+CREATE USER shopsmart_user WITH PASSWORD 'REPLACE_WITH_LOCAL_PASSWORD';
 CREATE DATABASE shopsmart OWNER shopsmart_user;
 \q
 ```
@@ -304,7 +304,7 @@ Stop the previous ShopSmart process with `Ctrl+C`. Do not change ports unless th
 
 ### Products do not appear
 
-Verify http://localhost:3000/api/health, then run `npm run db:seed` and restart `npm run dev`.
+Verify http://localhost:3000/api/health and /api/products, check the API terminal, database connection and migrations. Do not reseed existing data to troubleshoot: db:seed deletes orders and products. Seed only an explicitly disposable, empty classroom database.
 
 ### The browser reports a CORS error
 
@@ -322,4 +322,17 @@ Confirm that the front end uses http://localhost:5173 and that `FRONTEND_URL=htt
 | `npm run db:seed` | Reset and insert sample data |
 | `npm run db:studio` | Open the Prisma database viewer |
 
-Read `docs/TEACHING_ROADMAP.md` for the weekly improvement plan.
+Read `docs/TEACHING_ROADMAP.pdf` for the weekly improvement plan.
+
+
+## Quality and deployment release (individual activity)
+
+See [release notes](docs/release/RELEASE_NOTES.pdf), [test record](docs/release/TEST_RECORD.pdf), and [deployment plan and diagram](docs/release/DEPLOYMENT_PLAN.pdf). This is a local classroom release; staging has not been deployed.
+
+For an existing database, use `npm run db:generate` then `npm run db:deploy` to apply committed migrations without resetting data. `db:migrate` is for authoring local development migrations. Do not run `db:seed` on data you need to preserve.
+
+Copy `.env.example` files only when the corresponding `.env` does not already exist. Set the public `VITE_API_URL` (including `/api`) in `frontend/.env`; set `DATABASE_URL`, `PORT`, `FRONTEND_URL` and optional `GEMINI_API_KEY` / `GEMINI_MODEL` only in `backend/.env`. Use an approved Gemini model available to your account; provider failure produces a catalog fallback. Restart servers after environment changes; rebuild the frontend after changing `VITE_API_URL`.
+
+The cart is intentionally kept in React memory: navigation preserves it, a browser refresh clears it. Authentication and customer order-history routes are absent. Use fictional information only; do not expose checkout publicly. Assistant answers are composed from catalog facts; AI selects matching products but cannot add warranty, shipping or specification claims.
+
+Optional release verification: `npm run test:smoke` runs local Edge browser tests and creates one fictional order; see the release notes before running it. `npm run check:secrets` compares configured server secret values against current submission files and the existing frontend build without displaying the values.

@@ -8,7 +8,7 @@ const STOPWORDS = new Set([
   'cheapest', 'recommend', 'please', 'there', 'that', 'this', 'from', 'buy'
 ]);
 
-const BUDGET_PATTERN = /(?:₱|php|under|below|less\s+than|within|budget(?:\s+of)?|up\s+to|max(?:imum)?)\s*₱?\s*(\d{2,7})(?:\.\d{1,2})?/i;
+const BUDGET_PATTERN = /(?:₱|php|under|below|less\s+than|within|budget(?:\s+of)?|up\s+to|max(?:imum)?)\s*₱?\s*(\d{1,7}(?:\.\d{1,2})?)/i;
 
 export function parseBudget(question) {
   const match = question.replaceAll(',', '').match(BUDGET_PATTERN);
