@@ -21,3 +21,8 @@ backend/prisma/*.db-journal
 # Generated document exports and layout review files
 /tmp/
 /output/
+
+# AWS deployment secrets and database backups
+/deploy/aws/backups/
+*.dump
+*.pem

@@ -12,6 +12,8 @@ import { createAssistantRouter } from './routes/assistant.js';
 export function createApp({ db = prisma } = {}) {
   const app = express();
   app.disable('x-powered-by');
+  // Trust only local reverse-proxy connections; production API binds to loopback.
+  if (process.env.TRUST_PROXY === 'loopback') app.set('trust proxy', 'loopback');
   app.use(helmet());
   const frontendOrigin = new URL(process.env.FRONTEND_URL || 'http://localhost:5173').origin;
   app.use(cors({ origin: frontendOrigin, credentials: true }));

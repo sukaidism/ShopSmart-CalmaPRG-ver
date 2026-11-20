@@ -1,0 +1,27 @@
+{
+  "preparedDate": "2026-11-20",
+  "timezone": "Asia/Manila",
+  "status": "Prepared locally; not deployed on AWS",
+  "checks": {
+    "cloudFormation": "cfn-lint 1.61.0 Sydney (ap-southeast-2) schemas: zero errors; one W1011 advisory preferring Secrets Manager over the documented NoEcho password parameter",
+    "httpsConfiguration": "Caddy v2.11.9 validate passed for native loopback upstream and /srv/shopsmart static root",
+    "dependencies": "npm ci --dry-run --ignore-scripts passed against the committed lockfile",
+    "application": "npm run check: lint, 26 tests, production frontend build passed",
+    "database": "Isolated PostgreSQL tests passed with TRUST_PROXY=loopback, including guarded initialization, sessions, ownership, and CSRF",
+    "documents": "Sydney references updated in the runbook, diagram generator and Mermaid source; PNG and four-page PDF regenerated; all rendered PDF pages visually inspected; old Region absent from deployment PDF",
+    "secrets": "Existing configured-secret scan passed within its reported scope",
+    "nativeScripts": "setup.sh, update.sh and install-runtime.sh passed bash -n; backup.cjs passed node --check. Not executed on EC2.",
+    "network": "Verified private RDS, EC2-security-group-only port 5432, rds.force_ssl=1, encryption, private subnets in two AZs, no private internet route, Single-AZ DB and final snapshot policy"
+  },
+  "notVerified": [
+    "Actual AWS account plan/service/Region eligibility and charges",
+    "CloudFormation creation and RDS PostgreSQL 16.15/class availability in the real account",
+    "Native Ubuntu package installation and end-to-end setup.sh execution",
+    "RDS app-role creation, verified TLS, migrations, backup/restore and hosted customer journey",
+    "Public DNS, certificate issuance and service recovery after reboot"
+  ],
+  "awsResourcesCreated": false,
+  "architecture": "Native EC2 application + private Single-AZ RDS PostgreSQL 16.15",
+  "region": "ap-southeast-2",
+  "regionName": "Asia Pacific (Sydney)"
+}

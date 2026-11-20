@@ -1,0 +1,5 @@
+AWS Architecture Icons artwork distributed with Diagrams 0.25.1.
+Usage: https://aws.amazon.com/architecture/icons/
+Distribution: https://github.com/mingrammer/diagrams
+Bundled symbols: EC2, EBS, VPC, internet gateway, users, client, public subnet and server.
+RDS PostgreSQL instance symbol also bundled for the EC2/RDS deployment.

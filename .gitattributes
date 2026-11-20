@@ -1,1 +1,7 @@
 backend/prisma/migrations/**/*.sql text eol=lf
+
+# Preserve binary artifacts and Linux deployment scripts across Windows checkouts.
+*.pdf binary
+*.png binary
+*.sh text eol=lf
+deploy/aws/Caddyfile text eol=lf
