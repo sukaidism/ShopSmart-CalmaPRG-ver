@@ -25,6 +25,7 @@ async function record(id, startingState, action, expected, run) {
   let fallbackServer;
   try {
     const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+    await page.context().setExtraHTTPHeaders({ Origin: new URL(frontend).origin });
     const request = page.request;
     const captureApi = createApiEvidence(browser, evidence);
     const catalogResponse = await request.get(`${api}/products`);
@@ -77,20 +78,24 @@ async function record(id, startingState, action, expected, run) {
       await page.getByRole('heading', { name: 'Your cart is empty' }).waitFor();
       return `Quantity 1 total PHP ${product.price}; quantity 2 total PHP ${product.price*2}; decrease/remove worked; refresh cleared memory cart.`;
     });
-    const fictional = { customerName: 'Alexandra Eala', email: 'alexandra.eala@example.test', address: '123 Fictional Street, Demo City' };
-    await record('INVALID-CHECKOUT', 'Cart with one product', 'Try empty form in browser; POST invalid email and short address directly', 'Browser refuses; API returns 422 INVALID_ORDER', async () => {
+    const fictional = { customerName: 'Alexandra Eala', email: 'smoke-' + Date.now() + '@example.test', address: '123 Fictional Street, Demo City' };
+    const registered = await request.post(api + '/auth/register', { data: { name: fictional.customerName, email: fictional.email, password: require('node:crypto').randomBytes(24).toString('hex') } });
+    assert.equal(registered.status(), 201, 'Create fictional smoke customer');
+    await page.reload();
+    await page.getByRole('heading', { name: 'Your cart is empty' }).waitFor();
+    await record('INVALID-CHECKOUT', 'Cart with one product', 'Try empty form in browser; POST short address directly', 'Browser refuses; API returns 422 INVALID_ORDER', async () => {
       await page.getByRole('link', { name: 'Browse products' }).click();
       await page.locator('.product-card').filter({ has: page.getByRole('heading', { name: product.name, exact: true }) }).getByRole('button', { name: 'Add to cart' }).click();
       await page.getByRole('link', { name: 'Cart (1)', exact: true }).click();
       await page.getByRole('link', { name: 'Proceed to checkout' }).click();
       await page.getByRole('button', { name: 'Place simulated order' }).click();
-      assert.equal(await page.getByLabel('Full name').evaluate((input) => input.validity.valueMissing), true);
+      assert.equal(await page.getByLabel('Delivery address').evaluate((input) => input.validity.valueMissing), true);
       const response = await request.post(`${api}/orders`, { data: { ...fictional, email: 'bad-email', address: 'short', items: [{ productId: product.id, quantity: 1 }] } });
       assert.equal(response.status(), 422);
       const body = await response.json();
       assert.equal(body.error.code, 'INVALID_ORDER');
       await captureApi('16-api-invalid-order', 'POST', `${api}/orders`, { ...fictional, email: 'bad-email', address: 'short', items: [{ productId: product.id, quantity: 1 }] }, response, body);
-      return 'Required field blocked browser submission; API HTTP 422 INVALID_ORDER for invalid email/address.';
+      return 'Required field blocked browser submission; API HTTP 422 INVALID_ORDER for invalid address.';
     });
     await record('STOCK', 'Existing out-of-stock product or above-stock request', 'Inspect disabled purchase control; direct POST unavailable product or stock+1 units (max 20)', 'Disabled button; API 409 INSUFFICIENT_STOCK; no order', async () => {
       const target = unavailable || products.find((p) => p.stock < 20);
@@ -111,8 +116,6 @@ async function record(id, startingState, action, expected, run) {
       return `${target.name} stock ${target.stock}; quantity ${target.stock+1} returned HTTP 409 ${body.error.code}: ${body.error.message}`;
     });
     await record('CHECKOUT', 'One cart unit; no successful order in this run', 'Fill Alexandra Eala, alexandra.eala@example.test, 123 Fictional Street, Demo City; submit once', 'One 201 order; server total equals catalog price; cart cleared; stock decrements once', async () => {
-      await page.getByLabel('Full name').fill(fictional.customerName);
-      await page.getByLabel('Email address').fill(fictional.email);
       await page.getByLabel('Delivery address').fill(fictional.address);
       const responsePromise = page.waitForResponse((r) => r.url() === `${api}/orders` && r.request().method() === 'POST');
       await page.getByRole('button', { name: 'Place simulated order' }).click();

@@ -17,7 +17,9 @@
     "db:studio": "npm run db:studio --workspace backend",
     "db:deploy": "npm run db:deploy --workspace backend",
     "test:smoke": "node scripts/release-smoke.cjs",
-    "check:secrets": "node scripts/release-secrets.cjs"
+    "check:secrets": "node scripts/release-secrets.cjs",
+    "test:auth:integration": "node scripts/auth-integration.mjs",
+    "test:auth:browser": "node scripts/auth-integration.mjs --browser"
   },
   "devDependencies": {
     "concurrently": "^9.2.1",
