@@ -1,0 +1,359 @@
+{
+  "description": "Real local API responses captured during the smoke run. Screenshots use a plain evidence viewer showing method, URL, status, request and unmodified JSON body.",
+  "entries": [
+    {
+      "screenshot": "12-api-products.png",
+      "capturedAt": "11/12/2026, 2:02:06 AM",
+      "method": "GET",
+      "url": "http://localhost:3000/api/products",
+      "status": 200,
+      "requestBody": null,
+      "responseBody": {
+        "products": [
+          {
+            "id": 7,
+            "name": "Wireless Mouse",
+            "description": "Quiet wireless mouse with adjustable sensitivity and USB receiver.",
+            "category": "Accessories",
+            "emoji": "🖱️",
+            "price": 650,
+            "stock": 11,
+            "active": true,
+            "createdAt": "2026-11-04T13:52:23.164Z",
+            "updatedAt": "2026-11-11T16:16:28.519Z"
+          },
+          {
+            "id": 8,
+            "name": "Compact Mechanical Keyboard",
+            "description": "Hot-swappable compact keyboard with tactile switches.",
+            "category": "Accessories",
+            "emoji": "⌨️",
+            "price": 1850,
+            "stock": 0,
+            "active": true,
+            "createdAt": "2026-11-04T13:52:23.164Z",
+            "updatedAt": "2026-11-05T10:58:23.713Z"
+          },
+          {
+            "id": 9,
+            "name": "USB-C Study Lamp",
+            "description": "Adjustable desk lamp with three brightness levels.",
+            "category": "Study",
+            "emoji": "💡",
+            "price": 900,
+            "stock": 10,
+            "active": true,
+            "createdAt": "2026-11-04T13:52:23.164Z",
+            "updatedAt": "2026-11-04T13:52:23.164Z"
+          },
+          {
+            "id": 10,
+            "name": "1080p Webcam",
+            "description": "Full HD webcam with privacy cover and built-in microphone.",
+            "category": "Video",
+            "emoji": "📷",
+            "price": 1450,
+            "stock": 6,
+            "active": true,
+            "createdAt": "2026-11-04T13:52:23.164Z",
+            "updatedAt": "2026-11-04T13:52:23.164Z"
+          },
+          {
+            "id": 11,
+            "name": "Laptop Stand",
+            "description": "Foldable aluminum stand for laptops up to 16 inches.",
+            "category": "Study",
+            "emoji": "💻",
+            "price": 1200,
+            "stock": 9,
+            "active": true,
+            "createdAt": "2026-11-04T13:52:23.164Z",
+            "updatedAt": "2026-11-04T13:52:23.164Z"
+          },
+          {
+            "id": 12,
+            "name": "USB Headset",
+            "description": "Over-ear headset with noise-reducing boom microphone.",
+            "category": "Audio",
+            "emoji": "🎧",
+            "price": 1350,
+            "stock": 7,
+            "active": true,
+            "createdAt": "2026-11-04T13:52:23.164Z",
+            "updatedAt": "2026-11-04T13:52:23.164Z"
+          }
+        ]
+      }
+    },
+    {
+      "screenshot": "11-api-health.png",
+      "capturedAt": "11/12/2026, 2:02:08 AM",
+      "method": "GET",
+      "url": "http://localhost:3000/api/health",
+      "status": 200,
+      "requestBody": null,
+      "responseBody": {
+        "status": "ok"
+      }
+    },
+    {
+      "screenshot": "16-api-invalid-order.png",
+      "capturedAt": "11/12/2026, 2:02:12 AM",
+      "method": "POST",
+      "url": "http://localhost:3000/api/orders",
+      "status": 422,
+      "requestBody": {
+        "customerName": "Alexandra Eala",
+        "email": "bad-email",
+        "address": "short",
+        "items": [
+          {
+            "productId": 7,
+            "quantity": 1
+          }
+        ]
+      },
+      "responseBody": {
+        "error": {
+          "code": "INVALID_ORDER",
+          "message": "Check the customer and cart information.",
+          "details": {
+            "formErrors": [],
+            "fieldErrors": {
+              "email": [
+                "Invalid email address"
+              ],
+              "address": [
+                "Too small: expected string to have >=10 characters"
+              ]
+            }
+          }
+        }
+      }
+    },
+    {
+      "screenshot": "17-api-stock-rejection.png",
+      "capturedAt": "11/12/2026, 2:02:13 AM",
+      "method": "POST",
+      "url": "http://localhost:3000/api/orders",
+      "status": 409,
+      "requestBody": {
+        "customerName": "Alexandra Eala",
+        "email": "alexandra.eala@example.test",
+        "address": "123 Fictional Street, Demo City",
+        "items": [
+          {
+            "productId": 8,
+            "quantity": 1
+          }
+        ]
+      },
+      "responseBody": {
+        "error": {
+          "code": "INSUFFICIENT_STOCK",
+          "message": "Only 0 unit(s) of Compact Mechanical Keyboard are available."
+        }
+      }
+    },
+    {
+      "screenshot": "18-api-order-created.png",
+      "capturedAt": "11/12/2026, 2:02:14 AM",
+      "method": "POST",
+      "url": "http://localhost:3000/api/orders",
+      "status": 201,
+      "requestBody": {
+        "customerName": "Alexandra Eala",
+        "email": "alexandra.eala@example.test",
+        "address": "123 Fictional Street, Demo City",
+        "items": [
+          {
+            "productId": 7,
+            "quantity": 1
+          }
+        ]
+      },
+      "responseBody": {
+        "id": 3,
+        "customerName": "Alexandra Eala",
+        "email": "alexandra.eala@example.test",
+        "address": "123 Fictional Street, Demo City",
+        "status": "PENDING",
+        "total": 650,
+        "createdAt": "2026-11-11T18:02:14.900Z",
+        "items": [
+          {
+            "id": 4,
+            "orderId": 3,
+            "productId": 7,
+            "quantity": 1,
+            "unitPrice": 650
+          }
+        ]
+      }
+    },
+    {
+      "screenshot": "19-api-assistant.png",
+      "capturedAt": "11/12/2026, 2:02:22 AM",
+      "method": "POST",
+      "url": "http://localhost:3000/api/assistant/questions",
+      "status": 200,
+      "requestBody": {
+        "question": "wireless mouse under PHP 700"
+      },
+      "responseBody": {
+        "answer": "Based on the current ShopSmart catalog, consider: Wireless Mouse (₱650, 10 in stock).",
+        "recommendedProducts": [
+          {
+            "id": 7,
+            "name": "Wireless Mouse",
+            "price": 650,
+            "category": "Accessories"
+          }
+        ],
+        "sources": [
+          {
+            "type": "product",
+            "id": 7,
+            "name": "Wireless Mouse"
+          }
+        ],
+        "mode": "rules",
+        "notice": "The AI helper is unavailable right now, so this answer comes from catalog rules."
+      }
+    },
+    {
+      "screenshot": "20-api-assistant-no-match.png",
+      "capturedAt": "11/12/2026, 2:02:22 AM",
+      "method": "POST",
+      "url": "http://localhost:3000/api/assistant/questions",
+      "status": 200,
+      "requestBody": {
+        "question": "Do you sell a drone?"
+      },
+      "responseBody": {
+        "answer": "I could not find an in-stock product matching that request.",
+        "recommendedProducts": [],
+        "sources": [],
+        "mode": "no-match"
+      }
+    },
+    {
+      "screenshot": "22-api-provider-fallback.png",
+      "capturedAt": "11/12/2026, 2:02:24 AM",
+      "method": "POST",
+      "url": "http://localhost:3001/api/assistant/questions",
+      "status": 200,
+      "requestBody": {
+        "question": "mouse"
+      },
+      "responseBody": {
+        "answer": "Based on the current ShopSmart catalog, consider: Wireless Mouse (₱650, 10 in stock).",
+        "recommendedProducts": [
+          {
+            "id": 7,
+            "name": "Wireless Mouse",
+            "price": 650,
+            "category": "Accessories"
+          }
+        ],
+        "sources": [
+          {
+            "type": "product",
+            "id": 7,
+            "name": "Wireless Mouse"
+          }
+        ],
+        "mode": "rules",
+        "notice": "The AI helper is unavailable right now, so this answer comes from catalog rules."
+      }
+    },
+    {
+      "screenshot": "13-api-product-search.png",
+      "capturedAt": "11/12/2026, 2:02:25 AM",
+      "method": "GET",
+      "url": "http://localhost:3000/api/products?search=keyboard",
+      "status": 200,
+      "requestBody": null,
+      "responseBody": {
+        "products": [
+          {
+            "id": 8,
+            "name": "Compact Mechanical Keyboard",
+            "description": "Hot-swappable compact keyboard with tactile switches.",
+            "category": "Accessories",
+            "emoji": "⌨️",
+            "price": 1850,
+            "stock": 0,
+            "active": true,
+            "createdAt": "2026-11-04T13:52:23.164Z",
+            "updatedAt": "2026-11-05T10:58:23.713Z"
+          }
+        ]
+      }
+    },
+    {
+      "screenshot": "14-api-product-details.png",
+      "capturedAt": "11/12/2026, 2:02:25 AM",
+      "method": "GET",
+      "url": "http://localhost:3000/api/products/7",
+      "status": 200,
+      "requestBody": null,
+      "responseBody": {
+        "id": 7,
+        "name": "Wireless Mouse",
+        "description": "Quiet wireless mouse with adjustable sensitivity and USB receiver.",
+        "category": "Accessories",
+        "emoji": "🖱️",
+        "price": 650,
+        "stock": 10,
+        "active": true,
+        "createdAt": "2026-11-04T13:52:23.164Z",
+        "updatedAt": "2026-11-11T18:02:14.896Z"
+      }
+    },
+    {
+      "screenshot": "15-api-invalid-product-id.png",
+      "capturedAt": "11/12/2026, 2:02:26 AM",
+      "method": "GET",
+      "url": "http://localhost:3000/api/products/invalid",
+      "status": 400,
+      "requestBody": null,
+      "responseBody": {
+        "error": {
+          "code": "INVALID_PRODUCT_ID",
+          "message": "Product ID must be a positive integer."
+        }
+      }
+    },
+    {
+      "screenshot": "23-api-product-not-found.png",
+      "capturedAt": "11/12/2026, 2:02:26 AM",
+      "method": "GET",
+      "url": "http://localhost:3000/api/products/2147483647",
+      "status": 404,
+      "requestBody": null,
+      "responseBody": {
+        "error": {
+          "code": "PRODUCT_NOT_FOUND",
+          "message": "Product could not be found."
+        }
+      }
+    },
+    {
+      "screenshot": "21-api-invalid-question.png",
+      "capturedAt": "11/12/2026, 2:02:27 AM",
+      "method": "POST",
+      "url": "http://localhost:3000/api/assistant/questions",
+      "status": 422,
+      "requestBody": {
+        "question": "x"
+      },
+      "responseBody": {
+        "error": {
+          "code": "INVALID_QUESTION",
+          "message": "Question must contain between 3 and 300 characters."
+        }
+      }
+    }
+  ]
+}

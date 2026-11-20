@@ -1,0 +1,47 @@
+{
+  "date": "11/12/2026, 2:01:15 AM",
+  "frontend": "http://localhost:5173",
+  "api": "http://localhost:3000/api",
+  "records": [
+    {
+      "id": "HEALTH",
+      "startingState": "Local API and PostgreSQL running",
+      "action": "Open http://localhost:3000/api/health in browser",
+      "expected": "200 and status ok",
+      "observed": "Browser displayed {\"status\":\"ok\"}; HTTP 200.",
+      "decision": "PASS"
+    },
+    {
+      "id": "BROWSE",
+      "startingState": "Existing catalog, fresh browser session",
+      "action": "Open frontend; search keyboard; search zz-no-such-product-qa; clear search; open first Details",
+      "expected": "Catalog, relevant search, useful empty state, and product detail",
+      "observed": "6 products loaded; keyboard found; absent query showed empty state; Wireless Mouse detail loaded.",
+      "decision": "PASS"
+    },
+    {
+      "id": "CART",
+      "startingState": "Product detail, empty memory cart",
+      "action": "Add Wireless Mouse; increase to 2; decrease to 1; remove; add again; refresh cart",
+      "expected": "Accurate totals; removal and intentional refresh reset",
+      "observed": "Quantity 1 total PHP 650; quantity 2 total PHP 1300; decrease/remove worked; refresh cleared memory cart.",
+      "decision": "PASS"
+    },
+    {
+      "id": "INVALID-CHECKOUT",
+      "startingState": "Cart with one product",
+      "action": "Try empty form in browser; POST invalid email and short address directly",
+      "expected": "Browser refuses; API returns 422 INVALID_ORDER",
+      "observed": "Required field blocked browser submission; API HTTP 422 INVALID_ORDER for invalid email/address.",
+      "decision": "PASS"
+    },
+    {
+      "id": "STOCK",
+      "startingState": "Existing out-of-stock product or above-stock request",
+      "action": "Inspect disabled purchase control; direct POST unavailable product or stock+1 units (max 20)",
+      "expected": "Disabled button; API 409 INSUFFICIENT_STOCK; no order",
+      "observed": "apiRequestContext.post: connect ECONNREFUSED ::1:3000\nconnect ECONNREFUSED 127.0.0.1:3000\nCall log:\n\u001b[2m  - → POST http://localhost:3000/api/orders\u001b[22m\n\u001b[2m    - user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/157.0.0.0 Safari/537.36 Edg/157.0.0.0\u001b[22m\n\u001b[2m    - accept: */*\u001b[22m\n\u001b[2m    - accept-encoding: gzip,deflate,br\u001b[22m\n\u001b[2m    - content-type: application/json\u001b[22m\n\u001b[2m    - content-length: 154\u001b[22m\n",
+      "decision": "FAIL"
+    }
+  ]
+}

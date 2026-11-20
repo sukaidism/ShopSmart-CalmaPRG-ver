@@ -21,7 +21,30 @@ model Product {
   orderItems  OrderItem[]
 }
 
+model User {
+  id           Int       @id @default(autoincrement())
+  name         String
+  email        String    @unique
+  passwordHash String
+  createdAt    DateTime  @default(now())
+  sessions     Session[]
+  orders       Order[]
+}
+
+model Session {
+  id        Int      @id @default(autoincrement())
+  tokenHash String   @unique
+  userId    Int
+  expiresAt DateTime
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([userId])
+  @@index([expiresAt])
+}
+
 model Order {
+  userId       Int?
+  user         User? @relation(fields: [userId], references: [id], onDelete: Restrict)
+  @@index([userId])
   id           Int         @id @default(autoincrement())
   customerName String
   email        String

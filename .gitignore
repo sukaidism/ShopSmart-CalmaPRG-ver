@@ -10,3 +10,14 @@ backend/.env
 frontend/.env
 backend/prisma/*.db
 backend/prisma/*.db-journal
+
+# Environment variants can also contain secrets. Keep only public templates.
+.env.*
+!.env.example
+
+# Submission artifacts are delivered separately from source.
+/submission/
+
+# Generated document exports and layout review files
+/tmp/
+/output/

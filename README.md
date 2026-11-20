@@ -81,7 +81,7 @@ git --version
 13. At the `postgres=#` prompt, run these statements one at a time:
 
 ```sql
-CREATE USER shopsmart_user WITH PASSWORD 'shopsmart_dev';
+CREATE USER shopsmart_user WITH PASSWORD 'REPLACE_WITH_LOCAL_PASSWORD';
 CREATE DATABASE shopsmart OWNER shopsmart_user;
 ```
 
@@ -130,7 +130,7 @@ Copy-Item frontend\.env.example frontend\.env
 Open `backend/.env`. It should contain:
 
 ```env
-DATABASE_URL="postgresql://shopsmart_user:shopsmart_dev@localhost:5432/shopsmart?schema=public"
+DATABASE_URL="postgresql://shopsmart_user:REPLACE_WITH_LOCAL_PASSWORD@localhost:5432/shopsmart?schema=public"
 PORT=3000
 FRONTEND_URL=http://localhost:5173
 NODE_ENV=development
@@ -239,7 +239,7 @@ Keep this terminal open. It runs both applications:
 5. Add a product to the cart.
 6. Open the cart and change the quantity.
 7. Select **Proceed to checkout**.
-8. Enter a name, valid email address and address of at least ten characters.
+8. Create a fictional customer account or sign in when prompted, then enter a delivery address of at least ten characters.
 9. Select **Place simulated order**.
 10. Confirm that an order number appears.
 11. Open **AI Assistant**.
@@ -263,7 +263,7 @@ psql -U postgres
 Then run:
 
 ```sql
-CREATE USER shopsmart_user WITH PASSWORD 'shopsmart_dev';
+CREATE USER shopsmart_user WITH PASSWORD 'REPLACE_WITH_LOCAL_PASSWORD';
 CREATE DATABASE shopsmart OWNER shopsmart_user;
 \q
 ```
@@ -304,7 +304,7 @@ Stop the previous ShopSmart process with `Ctrl+C`. Do not change ports unless th
 
 ### Products do not appear
 
-Verify http://localhost:3000/api/health, then run `npm run db:seed` and restart `npm run dev`.
+Verify http://localhost:3000/api/health and /api/products, check the API terminal, database connection and migrations. Do not reseed existing data to troubleshoot: db:seed deletes orders and products. Seed only an explicitly disposable, empty classroom database.
 
 ### The browser reports a CORS error
 
@@ -322,4 +322,46 @@ Confirm that the front end uses http://localhost:5173 and that `FRONTEND_URL=htt
 | `npm run db:seed` | Reset and insert sample data |
 | `npm run db:studio` | Open the Prisma database viewer |
 
-Read `docs/TEACHING_ROADMAP.md` for the weekly improvement plan.
+Read `docs/TEACHING_ROADMAP.pdf` for the weekly improvement plan.
+
+
+## Quality and deployment release (individual activity)
+
+See [release notes](docs/release/RELEASE_NOTES.pdf), [test record](docs/release/TEST_RECORD.pdf), and [deployment plan and diagram](docs/release/DEPLOYMENT_PLAN.pdf). This is a local classroom release; staging has not been deployed.
+
+For an existing database, use `npm run db:generate` then `npm run db:deploy` to apply committed migrations without resetting data. `db:migrate` is for authoring local development migrations. Do not run `db:seed` on data you need to preserve.
+
+Copy `.env.example` files only when the corresponding `.env` does not already exist. Set the public `VITE_API_URL` (including `/api`) in `frontend/.env`; set `DATABASE_URL`, `PORT`, `FRONTEND_URL` and optional `GEMINI_API_KEY` / `GEMINI_MODEL` only in `backend/.env`. Use an approved Gemini model available to your account; provider failure produces a catalog fallback. Restart servers after environment changes; rebuild the frontend after changing `VITE_API_URL`.
+
+The cart is intentionally kept in React memory: navigation preserves it, a browser refresh clears it. Customer registration, sign-in, sign-out, and private order history are available. Checkout requires sign-in. Use fictional information only; online sign-in requires HTTPS. Assistant answers are composed from catalog facts; AI selects matching products but cannot add warranty, shipping or specification claims.
+
+Optional release verification: `npm run test:smoke` runs local Edge browser tests and creates one fictional order; see the release notes before running it. `npm run check:secrets` compares configured server secret values against current submission files and the existing frontend build without displaying the values.
+
+## Customer accounts and private orders
+
+After updating this checkout, stop the API, run `npm run db:generate` and `npm run db:deploy` from the project root, then restart `npm run dev`. Do not run `db:seed` to apply this change.
+
+Choose **Sign in > Create an account instead**. Use fictional details and a password of 12-128 characters. Registration signs you in automatically. Checkout uses the account name and email; the server assigns ownership from the session and ignores supplied customer IDs. **My orders** lists your latest 100 orders; open an order to view its details.
+
+Existing orders are preserved with a null owner and stay inaccessible through customer routes. Matching an old order email does not grant ownership. No account recovery or email verification is included in this classroom feature.
+
+API endpoints:
+
+| Endpoint | Behavior |
+| --- | --- |
+| POST /api/auth/register | Create account: name, email, password; set session cookie |
+| POST /api/auth/login | Sign in: email, password; rotate current session |
+| GET /api/auth/me | Current customer; 401 for missing/expired session |
+| POST /api/auth/logout | Revoke current session and clear cookie; send JSON {} |
+| POST /api/orders | Signed-in checkout: address and items; identity comes from session |
+| GET /api/orders | Latest 100 orders belonging to the signed-in customer |
+| GET /api/orders/:id | Owner only; 404 for another customer's or unowned order |
+
+Passwords use salted scrypt hashes. Random session tokens are stored as SHA-256 digests in PostgreSQL, expire after seven days, and use HttpOnly, SameSite=Lax cookies. With `NODE_ENV=production`, cookies also require HTTPS and use a __Host- name. Deploy the frontend and API on the same origin (recommended), or the same site; unrelated Amplify and EC2 hostnames will not work with this SameSite policy. Set `FRONTEND_URL` to the exact frontend origin. Browser fetches include credentials. Mutations require JSON and reject foreign origins; cookie-authenticated CLI requests must supply the trusted Origin header too. Account attempts are limited to 20 per IP per 15 minutes; configure trusted proxy handling deliberately when deploying behind a proxy. Expired sessions are refused even if their database rows remain; periodically remove expired rows for long-running deployments.
+
+Verification:
+
+- `npm run check`: lint, password/session and HTTP guest-access tests, existing tests, production build.
+- `npm run test:auth:integration`: real PostgreSQL migration and authorization tests in a unique temporary schema, removed afterward. Requires backend/.env DATABASE_URL and database permission to create schemas; use a development database, never a production database.
+- `npm run test:auth:browser`: adds headless Edge registration, session reload, sign-out, owner details, direct route refresh, and cross-customer denial. Uses temporary frontend port 5179. Test accounts/orders stay in the temporary schema.
+- Existing `npm run test:smoke` now creates a unique fictional customer as well as a simulated order in its target database; it still changes stock. Previous release PDFs/evidence describe the earlier local release and have not been regenerated.

@@ -1,0 +1,95 @@
+{
+  "date": "11/12/2026, 2:02:27 AM",
+  "frontend": "http://localhost:5173",
+  "api": "http://localhost:3000/api",
+  "records": [
+    {
+      "id": "HEALTH",
+      "startingState": "Local API and PostgreSQL running",
+      "action": "Open http://localhost:3000/api/health in browser",
+      "expected": "200 and status ok",
+      "observed": "Browser displayed {\"status\":\"ok\"}; HTTP 200.",
+      "decision": "PASS"
+    },
+    {
+      "id": "BROWSE",
+      "startingState": "Existing catalog, fresh browser session",
+      "action": "Open frontend; search keyboard; search zz-no-such-product-qa; clear search; open first Details",
+      "expected": "Catalog, relevant search, useful empty state, and product detail",
+      "observed": "6 products loaded; keyboard found; absent query showed empty state; Wireless Mouse detail loaded.",
+      "decision": "PASS"
+    },
+    {
+      "id": "CART",
+      "startingState": "Product detail, empty memory cart",
+      "action": "Add Wireless Mouse; increase to 2; decrease to 1; remove; add again; refresh cart",
+      "expected": "Accurate totals; removal and intentional refresh reset",
+      "observed": "Quantity 1 total PHP 650; quantity 2 total PHP 1300; decrease/remove worked; refresh cleared memory cart.",
+      "decision": "PASS"
+    },
+    {
+      "id": "INVALID-CHECKOUT",
+      "startingState": "Cart with one product",
+      "action": "Try empty form in browser; POST invalid email and short address directly",
+      "expected": "Browser refuses; API returns 422 INVALID_ORDER",
+      "observed": "Required field blocked browser submission; API HTTP 422 INVALID_ORDER for invalid email/address.",
+      "decision": "PASS"
+    },
+    {
+      "id": "STOCK",
+      "startingState": "Existing out-of-stock product or above-stock request",
+      "action": "Inspect disabled purchase control; direct POST unavailable product or stock+1 units (max 20)",
+      "expected": "Disabled button; API 409 INSUFFICIENT_STOCK; no order",
+      "observed": "Compact Mechanical Keyboard stock 0; quantity 1 returned HTTP 409 INSUFFICIENT_STOCK: Only 0 unit(s) of Compact Mechanical Keyboard are available.",
+      "decision": "PASS"
+    },
+    {
+      "id": "CHECKOUT",
+      "startingState": "One cart unit; no successful order in this run",
+      "action": "Fill Alexandra Eala, alexandra.eala@example.test, 123 Fictional Street, Demo City; submit once",
+      "expected": "One 201 order; server total equals catalog price; cart cleared; stock decrements once",
+      "observed": "HTTP 201; order #3; total PHP 650; cart 0; product #7 stock 11 -> 10.",
+      "decision": "PASS"
+    },
+    {
+      "id": "ASSISTANT",
+      "startingState": "Assistant page; current catalog",
+      "action": "Ask wireless mouse under PHP 700; inspect answer and click catalog source",
+      "expected": "Eligible current product, correct price, linked record; controlled fallback allowed",
+      "observed": "HTTP 200; mode rules; Based on the current ShopSmart catalog, consider: Wireless Mouse (₱650, 10 in stock).; source link opened current product.",
+      "decision": "PASS"
+    },
+    {
+      "id": "NO-MATCH",
+      "startingState": "Assistant page",
+      "action": "Ask Do you sell a drone?",
+      "expected": "Honest no match, no sources/recommendations, loading ends",
+      "observed": "HTTP 200 no-match; honest message; sources and recommendations empty.",
+      "decision": "PASS"
+    },
+    {
+      "id": "API-FAILURE",
+      "startingState": "Assistant page; browser API requests can be intercepted",
+      "action": "Abort assistant request in browser, submit mouse; then abort product requests and open home",
+      "expected": "Useful error, enabled submit button, no endless loading; catalog offers backend guidance",
+      "observed": "Assistant displayed Failed to fetch and re-enabled submit; catalog ended loading and displayed backend guidance. Browser route abort simulated API outage; live server remained running.",
+      "decision": "PASS"
+    },
+    {
+      "id": "PROVIDER-FAILURE",
+      "startingState": "Separate local API on 3001 with empty provider key, same database",
+      "action": "Start API with GEMINI_API_KEY empty; route browser assistant request to that API; ask mouse",
+      "expected": "200 rules fallback, notice, source links, loading ends",
+      "observed": "Real API with missing provider key returned HTTP 200 rules fallback, catalog sources and visible notice. No key was modified on disk.",
+      "decision": "PASS"
+    },
+    {
+      "id": "API-ENDPOINTS",
+      "startingState": "Local API and existing catalog",
+      "action": "GET search, product detail, invalid product ID, missing product; POST invalid assistant question",
+      "expected": "HTTP 200, 200, 400, 404 and 422 with captured response screenshots",
+      "observed": "Search/detail returned 200; invalid product ID 400; missing product 404; invalid question 422. Thirteen API request/response screenshots and raw JSON captured across this run.",
+      "decision": "PASS"
+    }
+  ]
+}
