@@ -365,3 +365,9 @@ Verification:
 - `npm run test:auth:integration`: real PostgreSQL migration and authorization tests in a unique temporary schema, removed afterward. Requires backend/.env DATABASE_URL and database permission to create schemas; use a development database, never a production database.
 - `npm run test:auth:browser`: adds headless Edge registration, session reload, sign-out, owner details, direct route refresh, and cross-customer denial. Uses temporary frontend port 5179. Test accounts/orders stay in the temporary schema.
 - Existing `npm run test:smoke` now creates a unique fictional customer as well as a simulated order in its target database; it still changes stock. Previous release PDFs/evidence describe the earlier local release and have not been regenerated.
+
+## AWS deployment package
+
+Deployment target: **Asia Pacific (Sydney), ap-southeast-2**, matching the assigned AWS project Region.
+
+Follow [the AWS deployment runbook](deploy/aws/README.md) for account setup, a free DuckDNS hostname, a single CloudFormation stack, native EC2 services and private RDS PostgreSQL, HTTPS, migrations, verification and cleanup. See the updated [AWS deployment plan](docs/release/DEPLOYMENT_PLAN.pdf) and [architecture diagram](docs/release/deployment-diagram.png). The diagram source and infrastructure template are included. Status: prepared locally; not yet deployed or verified on AWS. Earlier release/test PDFs describe the earlier local release.

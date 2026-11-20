@@ -1,0 +1,598 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "ShopSmart classroom demo: public Ubuntu EC2 and private Single-AZ RDS PostgreSQL 16. Creates credit-consuming resources. Run the setup script after creation.",
+  "Parameters": {
+    "KeyName": {
+      "Type": "AWS::EC2::KeyPair::KeyName",
+      "Description": "Existing EC2 key pair in this Region. Keep its private key locally."
+    },
+    "AdminCidr": {
+      "Type": "String",
+      "AllowedPattern": "^(?:[0-9]{1,3}\\.){3}[0-9]{1,3}/32$",
+      "ConstraintDescription": "Enter your current public IPv4 with /32.",
+      "Description": "Only this IPv4 address can connect to SSH; for example 203.0.113.10/32."
+    },
+    "InstanceType": {
+      "Type": "String",
+      "Default": "t3.small",
+      "AllowedValues": [
+        "t3.micro",
+        "t3.small"
+      ],
+      "Description": "Verify eligibility/price in your account. t3.small has 2 GiB RAM for the demo."
+    },
+    "UbuntuAmi": {
+      "Type": "AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>",
+      "Default": "/aws/service/canonical/ubuntu/server/24.04/stable/current/amd64/hvm/ebs-gp3/ami-id",
+      "Description": "Canonical Ubuntu 24.04 LTS x86_64 public AMI parameter."
+    },
+    "DatabasePassword": {
+      "Type": "String",
+      "NoEcho": true,
+      "MinLength": 64,
+      "MaxLength": 64,
+      "AllowedPattern": "^[a-fA-F0-9]{64}$",
+      "ConstraintDescription": "Use exactly 64 hexadecimal characters and save them in your password manager.",
+      "Description": "New RDS administrator password: 64 hex characters. Enter again privately during server setup; never commit."
+    },
+    "DatabaseInstanceClass": {
+      "Type": "String",
+      "Default": "db.t4g.micro",
+      "AllowedValues": [
+        "db.t4g.micro",
+        "db.t3.micro"
+      ],
+      "Description": "Verify availability and Free plan eligibility in your account/Region. Single-AZ PostgreSQL."
+    }
+  },
+  "Resources": {
+    "Vpc": {
+      "Type": "AWS::EC2::VPC",
+      "Properties": {
+        "CidrBlock": "10.50.0.0/16",
+        "EnableDnsSupport": true,
+        "EnableDnsHostnames": true,
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": {
+              "Fn::Sub": "${AWS::StackName}-vpc"
+            }
+          },
+          {
+            "Key": "Project",
+            "Value": "ShopSmart"
+          }
+        ]
+      }
+    },
+    "Gateway": {
+      "Type": "AWS::EC2::InternetGateway",
+      "Properties": {
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": {
+              "Fn::Sub": "${AWS::StackName}-igw"
+            }
+          },
+          {
+            "Key": "Project",
+            "Value": "ShopSmart"
+          }
+        ]
+      }
+    },
+    "GatewayAttachment": {
+      "Type": "AWS::EC2::VPCGatewayAttachment",
+      "Properties": {
+        "VpcId": {
+          "Ref": "Vpc"
+        },
+        "InternetGatewayId": {
+          "Ref": "Gateway"
+        }
+      }
+    },
+    "Subnet": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {
+        "VpcId": {
+          "Ref": "Vpc"
+        },
+        "CidrBlock": "10.50.1.0/24",
+        "AvailabilityZone": {
+          "Fn::Select": [
+            0,
+            {
+              "Fn::GetAZs": ""
+            }
+          ]
+        },
+        "MapPublicIpOnLaunch": false,
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": {
+              "Fn::Sub": "${AWS::StackName}-public-subnet"
+            }
+          },
+          {
+            "Key": "Project",
+            "Value": "ShopSmart"
+          }
+        ]
+      }
+    },
+    "RouteTable": {
+      "Type": "AWS::EC2::RouteTable",
+      "Properties": {
+        "VpcId": {
+          "Ref": "Vpc"
+        },
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": {
+              "Fn::Sub": "${AWS::StackName}-routes"
+            }
+          },
+          {
+            "Key": "Project",
+            "Value": "ShopSmart"
+          }
+        ]
+      }
+    },
+    "InternetRoute": {
+      "Type": "AWS::EC2::Route",
+      "DependsOn": "GatewayAttachment",
+      "Properties": {
+        "RouteTableId": {
+          "Ref": "RouteTable"
+        },
+        "DestinationCidrBlock": "0.0.0.0/0",
+        "GatewayId": {
+          "Ref": "Gateway"
+        }
+      }
+    },
+    "SubnetRoutes": {
+      "Type": "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties": {
+        "SubnetId": {
+          "Ref": "Subnet"
+        },
+        "RouteTableId": {
+          "Ref": "RouteTable"
+        }
+      }
+    },
+    "WebSecurityGroup": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "GroupDescription": "Public HTTP/HTTPS; SSH from admin /32 only; API/database not exposed",
+        "VpcId": {
+          "Ref": "Vpc"
+        },
+        "SecurityGroupIngress": [
+          {
+            "IpProtocol": "tcp",
+            "FromPort": 22,
+            "ToPort": 22,
+            "CidrIp": {
+              "Ref": "AdminCidr"
+            },
+            "Description": "Administrator SSH only"
+          },
+          {
+            "IpProtocol": "tcp",
+            "FromPort": 80,
+            "ToPort": 80,
+            "CidrIp": "0.0.0.0/0",
+            "Description": "HTTPS redirect and certificate validation"
+          },
+          {
+            "IpProtocol": "tcp",
+            "FromPort": 443,
+            "ToPort": 443,
+            "CidrIp": "0.0.0.0/0",
+            "Description": "Public HTTPS"
+          }
+        ],
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": {
+              "Fn::Sub": "${AWS::StackName}-web-sg"
+            }
+          },
+          {
+            "Key": "Project",
+            "Value": "ShopSmart"
+          }
+        ]
+      }
+    },
+    "Server": {
+      "Type": "AWS::EC2::Instance",
+      "DependsOn": [
+        "InternetRoute",
+        "SubnetRoutes"
+      ],
+      "Properties": {
+        "ImageId": {
+          "Ref": "UbuntuAmi"
+        },
+        "InstanceType": {
+          "Ref": "InstanceType"
+        },
+        "KeyName": {
+          "Ref": "KeyName"
+        },
+        "SubnetId": {
+          "Ref": "Subnet"
+        },
+        "SecurityGroupIds": [
+          {
+            "Ref": "WebSecurityGroup"
+          }
+        ],
+        "MetadataOptions": {
+          "HttpTokens": "required",
+          "HttpEndpoint": "enabled"
+        },
+        "CreditSpecification": {
+          "CPUCredits": "standard"
+        },
+        "BlockDeviceMappings": [
+          {
+            "DeviceName": "/dev/sda1",
+            "Ebs": {
+              "VolumeSize": 20,
+              "VolumeType": "gp3",
+              "Encrypted": true,
+              "DeleteOnTermination": true
+            }
+          }
+        ],
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": {
+              "Fn::Sub": "${AWS::StackName}-server"
+            }
+          },
+          {
+            "Key": "Project",
+            "Value": "ShopSmart"
+          }
+        ]
+      }
+    },
+    "PublicIp": {
+      "Type": "AWS::EC2::EIP",
+      "DependsOn": "GatewayAttachment",
+      "Properties": {
+        "Domain": "vpc",
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": {
+              "Fn::Sub": "${AWS::StackName}-public-ip"
+            }
+          },
+          {
+            "Key": "Project",
+            "Value": "ShopSmart"
+          }
+        ]
+      }
+    },
+    "IpAssociation": {
+      "Type": "AWS::EC2::EIPAssociation",
+      "Properties": {
+        "AllocationId": {
+          "Fn::GetAtt": [
+            "PublicIp",
+            "AllocationId"
+          ]
+        },
+        "InstanceId": {
+          "Ref": "Server"
+        }
+      }
+    },
+    "DatabaseSubnetA": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {
+        "VpcId": {
+          "Ref": "Vpc"
+        },
+        "CidrBlock": "10.50.10.0/24",
+        "AvailabilityZone": {
+          "Fn::Select": [
+            0,
+            {
+              "Fn::GetAZs": ""
+            }
+          ]
+        },
+        "MapPublicIpOnLaunch": false,
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": {
+              "Fn::Sub": "${AWS::StackName}-DatabaseSubnetA"
+            }
+          },
+          {
+            "Key": "Project",
+            "Value": "ShopSmart"
+          }
+        ]
+      }
+    },
+    "DatabaseSubnetB": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {
+        "VpcId": {
+          "Ref": "Vpc"
+        },
+        "CidrBlock": "10.50.11.0/24",
+        "AvailabilityZone": {
+          "Fn::Select": [
+            1,
+            {
+              "Fn::GetAZs": ""
+            }
+          ]
+        },
+        "MapPublicIpOnLaunch": false,
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": {
+              "Fn::Sub": "${AWS::StackName}-DatabaseSubnetB"
+            }
+          },
+          {
+            "Key": "Project",
+            "Value": "ShopSmart"
+          }
+        ]
+      }
+    },
+    "DatabaseRoutes": {
+      "Type": "AWS::EC2::RouteTable",
+      "Properties": {
+        "VpcId": {
+          "Ref": "Vpc"
+        },
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": {
+              "Fn::Sub": "${AWS::StackName}-private-db-routes"
+            }
+          },
+          {
+            "Key": "Project",
+            "Value": "ShopSmart"
+          }
+        ]
+      }
+    },
+    "DatabaseSubnetARoutes": {
+      "Type": "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties": {
+        "SubnetId": {
+          "Ref": "DatabaseSubnetA"
+        },
+        "RouteTableId": {
+          "Ref": "DatabaseRoutes"
+        }
+      }
+    },
+    "DatabaseSubnetBRoutes": {
+      "Type": "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties": {
+        "SubnetId": {
+          "Ref": "DatabaseSubnetB"
+        },
+        "RouteTableId": {
+          "Ref": "DatabaseRoutes"
+        }
+      }
+    },
+    "DatabaseSecurityGroup": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "VpcId": {
+          "Ref": "Vpc"
+        },
+        "GroupDescription": "PostgreSQL only from ShopSmart EC2 security group",
+        "SecurityGroupIngress": [
+          {
+            "IpProtocol": "tcp",
+            "FromPort": 5432,
+            "ToPort": 5432,
+            "SourceSecurityGroupId": {
+              "Ref": "WebSecurityGroup"
+            },
+            "Description": "EC2 API to private RDS only"
+          }
+        ],
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": {
+              "Fn::Sub": "${AWS::StackName}-rds-sg"
+            }
+          },
+          {
+            "Key": "Project",
+            "Value": "ShopSmart"
+          }
+        ]
+      }
+    },
+    "DatabaseSubnetGroup": {
+      "Type": "AWS::RDS::DBSubnetGroup",
+      "Properties": {
+        "DBSubnetGroupDescription": "Private subnets in two AZs; database remains Single-AZ",
+        "SubnetIds": [
+          {
+            "Ref": "DatabaseSubnetA"
+          },
+          {
+            "Ref": "DatabaseSubnetB"
+          }
+        ],
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": {
+              "Fn::Sub": "${AWS::StackName}-db-subnets"
+            }
+          },
+          {
+            "Key": "Project",
+            "Value": "ShopSmart"
+          }
+        ]
+      }
+    },
+    "DatabaseParameters": {
+      "Type": "AWS::RDS::DBParameterGroup",
+      "Properties": {
+        "Description": "Require encrypted PostgreSQL connections",
+        "Family": "postgres16",
+        "Parameters": {
+          "rds.force_ssl": "1"
+        },
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": {
+              "Fn::Sub": "${AWS::StackName}-postgres-parameters"
+            }
+          },
+          {
+            "Key": "Project",
+            "Value": "ShopSmart"
+          }
+        ]
+      }
+    },
+    "Database": {
+      "Type": "AWS::RDS::DBInstance",
+      "DeletionPolicy": "Snapshot",
+      "UpdateReplacePolicy": "Snapshot",
+      "Properties": {
+        "Engine": "postgres",
+        "EngineVersion": "16.15",
+        "EngineLifecycleSupport": "open-source-rds-extended-support-disabled",
+        "DBInstanceClass": {
+          "Ref": "DatabaseInstanceClass"
+        },
+        "DBName": "shopsmart",
+        "MasterUsername": "shopsmart_admin",
+        "MasterUserPassword": {
+          "Ref": "DatabasePassword"
+        },
+        "AllocatedStorage": "20",
+        "StorageType": "gp3",
+        "StorageEncrypted": true,
+        "PubliclyAccessible": false,
+        "MultiAZ": false,
+        "AvailabilityZone": {
+          "Fn::Select": [
+            0,
+            {
+              "Fn::GetAZs": ""
+            }
+          ]
+        },
+        "DBSubnetGroupName": {
+          "Ref": "DatabaseSubnetGroup"
+        },
+        "DBParameterGroupName": {
+          "Ref": "DatabaseParameters"
+        },
+        "VPCSecurityGroups": [
+          {
+            "Ref": "DatabaseSecurityGroup"
+          }
+        ],
+        "BackupRetentionPeriod": 1,
+        "AutoMinorVersionUpgrade": true,
+        "CopyTagsToSnapshot": true,
+        "DeletionProtection": false,
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": {
+              "Fn::Sub": "${AWS::StackName}-postgres"
+            }
+          },
+          {
+            "Key": "Project",
+            "Value": "ShopSmart"
+          }
+        ]
+      }
+    }
+  },
+  "Outputs": {
+    "PublicIPv4": {
+      "Description": "Point your DuckDNS hostname to this static IPv4",
+      "Value": {
+        "Ref": "PublicIp"
+      }
+    },
+    "InstanceId": {
+      "Value": {
+        "Ref": "Server"
+      }
+    },
+    "SshCommand": {
+      "Value": {
+        "Fn::Sub": "ssh -i PATH_TO_KEY.pem ubuntu@${PublicIp}"
+      }
+    },
+    "SecurityGroupId": {
+      "Value": {
+        "Ref": "WebSecurityGroup"
+      }
+    },
+    "VpcId": {
+      "Value": {
+        "Ref": "Vpc"
+      }
+    },
+    "DatabaseEndpoint": {
+      "Description": "Paste this private RDS hostname into the setup script prompt",
+      "Value": {
+        "Fn::GetAtt": [
+          "Database",
+          "Endpoint.Address"
+        ]
+      }
+    },
+    "DatabaseIdentifier": {
+      "Description": "Use for backup and cleanup checks",
+      "Value": {
+        "Ref": "Database"
+      }
+    },
+    "DatabasePort": {
+      "Value": {
+        "Fn::GetAtt": [
+          "Database",
+          "Endpoint.Port"
+        ]
+      }
+    }
+  }
+}

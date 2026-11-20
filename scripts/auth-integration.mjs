@@ -1,5 +1,6 @@
 // Uses a uniquely named PostgreSQL schema, never the application's tables.
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
 import { readFile, readdir } from 'node:fs/promises';
 import { randomBytes } from 'node:crypto';
 import dotenv from 'dotenv';
@@ -22,6 +23,16 @@ try {
     const sql = await readFile('backend/prisma/migrations/' + dir + '/migration.sql', 'utf8');
     for (const statement of sql.replace(/--[^\n]*/g, '').split(';').filter((s) => s.trim())) await db.$executeRawUnsafe(statement);
   }
+  // Exercise the release initializer only inside this disposable test schema.
+  const seed = () => spawnSync(process.execPath, ['backend/prisma/seed-empty.js'], { env: { ...process.env, DATABASE_URL: url.href }, encoding: 'utf8' });
+  const firstSeed = seed();
+  assert.equal(firstSeed.status, 0, 'Empty-database catalog initialization should succeed: ' + firstSeed.stderr);
+  assert.equal(await db.product.count(), 6);
+  const catalogBefore = await db.product.findMany({ orderBy: { id: 'asc' } });
+  assert.equal(seed().status, 1, 'Initializer must refuse an existing catalog');
+  assert.deepEqual(await db.product.findMany({ orderBy: { id: 'asc' } }), catalogBefore);
+  await db.product.deleteMany();
+  console.log('PASS: initial catalog seed creates six products once and refuses to reset existing data.');
   const origin = new URL(process.env.FRONTEND_URL || 'http://localhost:5173').origin;
   server = createApp({ db }).listen(0, '127.0.0.1');
   await new Promise((resolve) => server.once('listening', resolve));

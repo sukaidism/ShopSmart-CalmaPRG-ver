@@ -1,0 +1,26 @@
+[Unit]
+Description=ShopSmart Express API
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+User=shopsmart
+Group=shopsmart
+WorkingDirectory=/opt/shopsmart/backend
+EnvironmentFile=/etc/shopsmart/backend.env
+Environment=PATH=/usr/local/bin:/usr/bin:/bin
+ExecStart=/usr/local/bin/node src/server.js
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=30
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+UMask=0077
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
